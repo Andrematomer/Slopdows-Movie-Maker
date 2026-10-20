@@ -23,7 +23,23 @@ Microsoft. It uses no Microsoft code, icons, sounds, logos or fonts.
 
 ## Status
 
-Planning. See `CLAUDE.md` for the decisions made so far.
+Early prototype (still work in progress):
+
+- Working: XP-style window, title cards, picture clips, drag to reorder, 7 transitions
+  (cut, fade, star wipe, iris, checkerboard, pixelate, spin), two parody watermarks,
+  2008 mode (4:3, blurry, low quality), MP4 export in the browser.
+- Not yet: video clips, audio, trimming, export in a Web Worker, more effects.
+- Export uses H.264 when the browser can encode it, otherwise VP9 inside an MP4.
+
+See `CLAUDE.md` for the decisions made so far.
+
+## Develop
+
+```
+npm install
+npm run dev     # local dev server
+npm run build   # type-check + production build into dist/
+```
 
 ## License
 
