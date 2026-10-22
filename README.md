@@ -23,13 +23,26 @@ Microsoft. It uses no Microsoft code, icons, sounds, logos or fonts.
 
 ## Status
 
-Early prototype (still work in progress):
+Work in progress, but usable:
 
-- Working: XP-style window, title cards, picture clips, drag to reorder, 7 transitions
-  (cut, fade, star wipe, iris, checkerboard, pixelate, spin), two parody watermarks,
-  2008 mode (4:3, blurry, low quality), MP4 export in the browser.
-- Not yet: video clips, audio, trimming, export in a Web Worker, more effects.
+- Working: XP-style window, title cards, pictures, **video and audio import** (decoded in the
+  browser), trim (start + length), split at playhead, volume, a music lane, drag to reorder,
+  7 transitions (cut, fade, star wipe, iris, checkerboard, pixelate, spin), two parody
+  watermarks, 2008 mode (4:3, blurry, telephone-band audio plus hiss), full screen preview,
+  **autosave** (project and media are kept in this browser's IndexedDB and restored on load),
+  MP4 export in the browser with sound (AAC, or Opus if AAC is unavailable).
 - Export uses H.264 when the browser can encode it, otherwise VP9 inside an MP4.
+
+### Known limitations
+
+- **No converter for odd formats.** Only what your browser can decode works (MP4/H.264, WebM,
+  MOV, MP3, WAV, AAC, Opus...). WMV, AVI, HEVC and similar are rejected with a message.
+  An ffmpeg.wasm fallback was dropped: single-threaded it is slow and ~30 MB, and it
+  cannot be made multithreaded on GitHub Pages.
+- Export runs on the main thread (the tab may feel sluggish), not in a Worker.
+- Whole audio tracks are decoded into memory, so very long audio files are heavy.
+- Autosave stores copies of your media in the browser; clearing site data deletes them.
+- Not yet: extra transitions from the plan (Random dissolve, Shatter), moving titles.
 
 See `CLAUDE.md` for the decisions made so far.
 

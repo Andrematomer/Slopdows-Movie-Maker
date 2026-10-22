@@ -1,6 +1,7 @@
 import { useRef, useState } from 'preact/hooks';
 import {
-  addImages,
+  addMedia,
+  splitAtPlayhead,
   addTitle,
   newProject,
   removeClip,
@@ -10,6 +11,7 @@ import {
   useStore,
 } from '../model/store';
 import { ExportDialog } from './ExportDialog';
+import { Icon } from './icons';
 import { MenuBar, type Menu } from './MenuBar';
 import { PreviewPane } from './PreviewPane';
 import { Storyboard } from './Storyboard';
@@ -23,6 +25,7 @@ export function App() {
   const playing = useStore((s) => s.playing);
   const selectedId = useStore((s) => s.selectedId);
   const fileName = useStore((s) => s.fileName);
+  const notice = useStore((s) => s.notice);
 
   const importPictures = () => fileInput.current?.click();
 
@@ -31,7 +34,7 @@ export function App() {
       label: 'File',
       items: [
         { label: 'New Project', onClick: newProject },
-        { label: 'Import Pictures…', onClick: importPictures },
+        { label: 'Import Pictures, Video or Music…', onClick: importPictures },
         'sep',
         { label: 'Save Movie File…', onClick: () => setExporting(true) },
       ],
@@ -39,6 +42,7 @@ export function App() {
     {
       label: 'Edit',
       items: [
+        { label: 'Split Clip at Playhead', onClick: splitAtPlayhead, disabled: !selectedId },
         { label: 'Remove Clip', onClick: () => selectedId && removeClip(selectedId), disabled: !selectedId },
       ],
     },
@@ -77,9 +81,10 @@ export function App() {
         <div class="window-body app-body">
           <MenuBar menus={menus} />
           <div class="toolbar">
-            <button onClick={importPictures}>🖼 Import</button>
-            <button onClick={addTitle}>🅣 Title</button>
-            <button onClick={() => setExporting(true)}>💾 Save Movie</button>
+            <button onClick={importPictures}><Icon name="picture" /> Import</button>
+            <button onClick={addTitle}><Icon name="title" /> Title</button>
+            <button onClick={splitAtPlayhead} disabled={!selectedId}><Icon name="scissors" /> Split</button>
+            <button onClick={() => setExporting(true)}><Icon name="save" /> Save Movie</button>
           </div>
           <div class="main">
             <TaskPane
@@ -91,7 +96,7 @@ export function App() {
           </div>
           <Storyboard />
           <div class="status-bar">
-            <p class="status-bar-field">Ready</p>
+            <p class="status-bar-field notice">{notice}</p>
             <p class="status-bar-field">Work in progress. Not affiliated with Microsoft.</p>
           </div>
         </div>
@@ -100,12 +105,12 @@ export function App() {
       <input
         ref={fileInput}
         type="file"
-        accept="image/*"
+        accept="image/*,video/*,audio/*,.mkv,.mov,.m4a,.flac,.opus"
         multiple
         hidden
         onChange={(e) => {
           const input = e.target as HTMLInputElement;
-          void addImages(Array.from(input.files ?? []));
+          void addMedia(Array.from(input.files ?? []));
           input.value = '';
         }}
       />

@@ -40,7 +40,7 @@ body { background: #3a6ea5; font-family: Tahoma, "Segoe UI", Arial, sans-serif; 
 .timecode { font-family: "Courier New", monospace; }
 
 /* storyboard */
-.storyboard { height: 130px; background: #fff; border-top: 2px groove #fff; overflow-x: auto; display: flex; align-items: flex-start; padding: 8px; gap: 0; box-sizing: border-box; }
+.storyboard { min-height: 130px; max-height: 190px; flex-direction: column; align-items: stretch !important; background: #fff; border-top: 2px groove #fff; overflow-x: auto; display: flex; padding: 8px; gap: 0; box-sizing: border-box; }
 .storyboard.drop-hot { outline: 2px dashed #316ac5; outline-offset: -4px; }
 .storyboard .hint { color: #888; margin: 30px auto; }
 .slot { display: flex; align-items: center; }
@@ -61,3 +61,18 @@ body { background: #3a6ea5; font-family: Tahoma, "Segoe UI", Arial, sans-serif; 
 @media (max-width: 760px) {
   .taskpane { display: none; }
 }
+
+.clips-row { display: flex; align-items: flex-start; }
+.icon { vertical-align: -3px; image-rendering: pixelated; }
+.thumb { position: relative; }
+.thumb .badge { position: absolute; right: 1px; bottom: 1px; background: #000a; line-height: 0; padding: 1px; }
+.audio-lane { display: flex; align-items: center; margin-top: 6px; height: 24px; background: #f4f1e4; border: 1px solid #aca899; white-space: nowrap; overflow: hidden; flex: none; }
+.lane-label { flex: none; padding: 0 6px; font-size: 10px; background: #ece9d8; height: 100%; display: flex; align-items: center; gap: 3px; margin-right: 4px; }
+.audio-bar { flex: none; height: 18px; min-height: 0; min-width: 0; padding: 0 4px; overflow: hidden; text-overflow: ellipsis; font-size: 10px; background: #f2c230; border: 1px solid #8a6d00; box-shadow: none; }
+.audio-bar.selected { background: #316ac5; color: #fff; border-color: #fff; }
+.status-bar .notice { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.taskpane a { display: flex; align-items: center; gap: 4px; }
+.taskpane .props { margin: 0 0 8px; padding: 14px 8px 8px; border: 1px solid #aca899; position: relative; }
+.taskpane .props legend { position: static; background: #ece9d8; color: #0046d5; padding: 0 4px; margin-left: -2px; }
+.preview-screen:fullscreen { width: 100vw; height: 100vh; max-height: none; border: 0; display: flex; align-items: center; justify-content: center; aspect-ratio: auto !important; }
+.preview-screen:fullscreen canvas { width: auto; height: auto; max-width: 100vw; max-height: 100vh; aspect-ratio: 4 / 3; }

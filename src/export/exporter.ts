@@ -1,13 +1,17 @@
 import {
+  AudioBufferSource,
   BufferTarget,
   CanvasSource,
   Mp4OutputFormat,
   Output,
   QUALITY_LOW,
   QUALITY_MEDIUM,
+  getFirstEncodableAudioCodec,
   getFirstEncodableVideoCodec,
 } from 'mediabunny';
+import { prepare } from '../model/assets';
 import { layout } from '../model/layout';
+import { hasAudio, renderMix } from '../media/mix';
 import type { Project } from '../model/types';
 import { renderFrame } from '../render/renderFrame';
 import type { Assets } from '../render/types';
@@ -19,8 +23,8 @@ export interface ExportProgress {
 
 /**
  * Renders the project to an MP4 entirely in the browser (WebCodecs + Mediabunny).
- * MVP: runs on the main thread (yielding between frames) and has no audio yet.
- * TODO: move to a Worker + OffscreenCanvas, add audio mixing.
+ * Runs on the main thread (yielding between frames). Known limitation: not in a Worker yet.
+ * Audio is mixed offline first (same graph as the preview), then encoded as AAC (or Opus).
  */
 export async function exportMovie(
   project: Project,
@@ -40,6 +44,15 @@ export async function exportMovie(
     throw new Error('This browser cannot encode H.264 or VP9 video at this size.');
   }
 
+  // soundtrack: skipped (with a console note) if the browser can't encode AAC or Opus
+  let mix: AudioBuffer | null = null;
+  let audioCodec: 'aac' | 'opus' | null = null;
+  if (hasAudio(project) && typeof AudioEncoder !== 'undefined') {
+    audioCodec = (await getFirstEncodableAudioCodec(['aac', 'opus'])) as 'aac' | 'opus' | null;
+    if (audioCodec) mix = await renderMix(project);
+    else console.warn('No AAC/Opus encoder: exporting without sound');
+  }
+
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
@@ -50,6 +63,11 @@ export async function exportMovie(
   const output = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target });
   const source = new CanvasSource(canvas, { codec, quality });
   output.addVideoTrack(source, { frameRate: fps });
+  let audioSource: AudioBufferSource | null = null;
+  if (mix && audioCodec) {
+    audioSource = new AudioBufferSource({ codec: audioCodec, bitrate: project.mode2008 ? 48_000 : 128_000 });
+    output.addAudioTrack(audioSource);
+  }
   await output.start();
 
   try {
@@ -57,12 +75,17 @@ export async function exportMovie(
     const frames = Math.max(1, Math.round(total * fps));
     for (let i = 0; i < frames; i++) {
       if (signal.aborted) throw new DOMException('Export cancelled', 'AbortError');
+      await prepare(project, i / fps);
       renderFrame(ctx, project, i / fps, assets);
       await source.add(i / fps, 1 / fps);
       onProgress({ frame: i + 1, frames });
       if (i % 4 === 0) await new Promise((r) => setTimeout(r, 0)); // let the UI breathe
     }
     source.close();
+    if (audioSource && mix) {
+      await audioSource.add(mix);
+      audioSource.close();
+    }
     await output.finalize();
   } catch (err) {
     await output.cancel().catch(() => {});

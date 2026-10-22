@@ -15,7 +15,7 @@ function drawSegment(ctx: Ctx, project: Project, seg: Segment, t: number, assets
   }
   ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, w, h);
-  const img = assets.getImage(clip.id);
+  const img = clip.kind === 'video' ? assets.getVideoFrame(clip.id) : assets.getImage(clip.mediaId);
   if (!img) return;
   const iw = (img as { width: number }).width;
   const ih = (img as { height: number }).height;

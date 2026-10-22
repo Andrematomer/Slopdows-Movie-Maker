@@ -34,9 +34,34 @@ export interface TitleClip extends BaseClip {
 export interface ImageClip extends BaseClip {
   kind: 'image';
   name: string;
+  /** key into the media store (same as the clip id for pictures) */
+  mediaId: string;
 }
 
-export type Clip = TitleClip | ImageClip;
+export interface VideoClip extends BaseClip {
+  kind: 'video';
+  name: string;
+  mediaId: string;
+  /** where in the source file this clip starts, seconds */
+  trimStart: number;
+  /** 0..1, applied to the clip's own sound */
+  volume: number;
+}
+
+export type Clip = TitleClip | ImageClip | VideoClip;
+
+/** Background music / narration lane. Placed anywhere on the timeline. */
+export interface AudioClip {
+  id: string;
+  name: string;
+  mediaId: string;
+  /** timeline position, seconds */
+  start: number;
+  /** where in the source file this clip starts, seconds */
+  trimStart: number;
+  duration: number;
+  volume: number;
+}
 
 export interface Watermarks {
   hypercam: boolean;
@@ -52,6 +77,7 @@ export interface Project {
   /** "2008 YouTube Mode": blurry, low bitrate */
   mode2008: boolean;
   clips: Clip[];
+  audioClips: AudioClip[];
   watermarks: Watermarks;
 }
 
@@ -75,6 +101,7 @@ export function defaultProject(): Project {
         transitionIn: 'cut',
       },
     ],
+    audioClips: [],
     watermarks: {
       hypercam: false,
       hypercamText: 'Unregistered HyperClam 2',
