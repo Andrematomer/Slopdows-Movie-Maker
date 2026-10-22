@@ -91,9 +91,9 @@ export function scheduleMix(ctx: BaseAudioContext, project: Project, from: numbe
 }
 
 /** Renders the whole soundtrack to one buffer (for export). */
-export async function renderMix(project: Project, sampleRate = 48000): Promise<AudioBuffer> {
+export async function renderMix(project: Project, sampleRate = 48000, channels = 2): Promise<AudioBuffer> {
   const { total } = layout(project);
-  const ctx = new OfflineAudioContext(2, Math.max(1, Math.ceil(total * sampleRate)), sampleRate);
+  const ctx = new OfflineAudioContext(channels, Math.max(1, Math.ceil(total * sampleRate)), sampleRate);
   scheduleMix(ctx, project, 0, total);
   return ctx.startRendering();
 }

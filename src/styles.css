@@ -1,5 +1,9 @@
 html, body, #app { height: 100%; margin: 0; }
-body { background: #3a6ea5; font-family: Tahoma, "Segoe UI", Arial, sans-serif; font-size: 12px; }
+/* System fonts only. "MS Sans Serif" is used if the OS has it (referencing is fine, bundling is not);
+   Tahoma is what Windows actually renders in practice; the rest are sane fallbacks. */
+:root { --ui-font: "MS Sans Serif", Tahoma, "Segoe UI", Verdana, Geneva, "DejaVu Sans", sans-serif; }
+body, button, input, select, textarea, label, legend, summary, .window, .title-bar, .title-bar-text, .status-bar-field, .menu-item, .menu-title, pre, pre * { font-family: var(--ui-font) !important; }
+body { background: #3a6ea5; font-size: 12px; }
 
 .desktop { height: 100%; padding: 6px; box-sizing: border-box; }
 .app-window { height: 100%; display: flex; flex-direction: column; }
@@ -45,6 +49,7 @@ body { background: #3a6ea5; font-family: Tahoma, "Segoe UI", Arial, sans-serif; 
 .storyboard .hint { color: #888; margin: 30px auto; }
 .slot { display: flex; align-items: center; }
 .trans { display: flex; flex-direction: column; align-items: center; background: none; border: 0; box-shadow: none; min-width: 56px; min-height: 0; padding: 0 2px; color: #c60; font-size: 18px; }
+.trans:hover .tr-icon { outline: 1px dotted #000; outline-offset: 1px; }
 .trans small { font-size: 9px; color: #444; }
 .tile { width: 96px; padding: 4px; border: 2px solid transparent; cursor: grab; }
 .tile.selected { background: #316ac5; color: #fff; }
@@ -76,3 +81,5 @@ body { background: #3a6ea5; font-family: Tahoma, "Segoe UI", Arial, sans-serif; 
 .taskpane .props legend { position: static; background: #ece9d8; color: #0046d5; padding: 0 4px; margin-left: -2px; }
 .preview-screen:fullscreen { width: 100vw; height: 100vh; max-height: none; border: 0; display: flex; align-items: center; justify-content: center; aspect-ratio: auto !important; }
 .preview-screen:fullscreen canvas { width: auto; height: auto; max-width: 100vw; max-height: 100vh; aspect-ratio: 4 / 3; }
+.tr-icon { border: 1px solid #1c1c1c; margin-bottom: 2px; }
+.hint-small { margin: 0 0 6px 18px; font-size: 10px; color: #3a4a8a; }

@@ -1,8 +1,8 @@
 import { useState } from 'preact/hooks';
 import { getThumbUrl } from '../model/assets';
-import { addMedia, moveClip, removeClip, setState, setTransition, useStore } from '../model/store';
+import { addMedia, moveClip, setState, setTransition, useStore } from '../model/store';
 import { TRANSITIONS } from '../model/types';
-import { Icon } from './icons';
+import { Icon, TransitionIcon } from './icons';
 import { randomTransition } from '../render/transitions';
 
 export function Storyboard() {
@@ -48,7 +48,7 @@ export function Storyboard() {
                   setTransition(clip.id, randomTransition());
                 }}
               >
-                {clip.transitionIn === 'cut' ? '▏' : '★'}
+                <TransitionIcon kind={clip.transitionIn} />
                 <small>{TRANSITIONS.find((t) => t.kind === clip.transitionIn)?.label}</small>
               </button>
             )}
@@ -69,9 +69,6 @@ export function Storyboard() {
                 }
               }}
               onClick={() => setState({ selectedId: clip.id })}
-              onKeyDown={(e) => {
-                if (e.key === 'Delete') removeClip(clip.id);
-              }}
               tabIndex={0}
             >
               <div class="thumb">

@@ -5,7 +5,6 @@ import {
   addImageAsset,
   addVideoAsset,
   dropAllMedia,
-  dropMedia,
   getMediaDuration,
   hasMedia,
   usedMediaIds,
@@ -25,6 +24,9 @@ export interface AppState {
   fileName: string;
   /** one-line message for the status bar */
   notice: string;
+  /** true while the last session is being restored from browser storage */
+  loading: boolean;
+  loadingMsg: string;
 }
 
 let state: AppState = {
@@ -35,6 +37,8 @@ let state: AppState = {
   assetRev: 0,
   fileName: 'Untitled',
   notice: 'Ready',
+  loading: true,
+  loadingMsg: 'Opening your last project…',
 };
 state.selectedId = state.project.clips[0]!.id;
 
@@ -60,10 +64,57 @@ export function useStore<T>(selector: (s: AppState) => T): T {
   return value;
 }
 
+// ---------- undo / redo ----------
+// Snapshots of the project (cheap: clips are small objects; media lives elsewhere).
+// Edits made within COALESCE_MS of each other (typing, dragging a slider) share one undo step.
+const undoStack: Project[] = [];
+const redoStack: Project[] = [];
+let lastPush = 0;
+const COALESCE_MS = 600;
+const MAX_UNDO = 100;
+
+function applyProject(project: Project): void {
+  const { total } = layout(project);
+  const sel = state.selectedId;
+  const stillThere = sel && (project.clips.some((c) => c.id === sel) || project.audioClips.some((a) => a.id === sel));
+  setState({
+    project,
+    time: Math.min(state.time, total),
+    selectedId: stillThere ? sel : (project.clips[0]?.id ?? null),
+    assetRev: state.assetRev + 1,
+  });
+}
+
 function setProject(project: Project): void {
+  const now = performance.now();
+  if (now - lastPush > COALESCE_MS) {
+    undoStack.push(state.project);
+    if (undoStack.length > MAX_UNDO) undoStack.shift();
+  }
+  lastPush = now;
+  redoStack.length = 0;
   const { total } = layout(project);
   setState({ project, time: Math.min(state.time, total) });
 }
+
+export function undo(): void {
+  const prev = undoStack.pop();
+  if (!prev) return;
+  redoStack.push(state.project);
+  lastPush = 0;
+  applyProject(prev);
+}
+
+export function redo(): void {
+  const next = redoStack.pop();
+  if (!next) return;
+  undoStack.push(state.project);
+  lastPush = 0;
+  applyProject(next);
+}
+
+export const canUndo = (): boolean => undoStack.length > 0;
+export const canRedo = (): boolean => redoStack.length > 0;
 
 export function totalDuration(): number {
   return layout(state.project).total;
@@ -73,6 +124,8 @@ export function totalDuration(): number {
 
 export function newProject(): void {
   dropAllMedia();
+  undoStack.length = 0;
+  redoStack.length = 0;
   void clearSaved();
   const project = defaultProject();
   setState({
@@ -167,22 +220,13 @@ export async function addMedia(files: File[]): Promise<void> {
   setState({ notice: problems.length ? `Skipped: ${problems.join(' | ')}` : 'Ready' });
 }
 
-function releaseUnusedMedia(project: Project): void {
-  const used = usedMediaIds(project);
-  const all = new Set<string>();
-  state.project.clips.forEach((c) => c.kind !== 'title' && all.add(c.mediaId));
-  state.project.audioClips.forEach((a) => all.add(a.mediaId));
-  all.forEach((id) => !used.has(id) && dropMedia(id));
-}
-
 export function removeClip(id: string): void {
   const clips = state.project.clips.filter((c) => c.id !== id);
   const audioClips = state.project.audioClips.filter((a) => a.id !== id);
   const idx = state.project.clips.findIndex((c) => c.id === id);
   const next = clips[Math.min(idx, clips.length - 1)]?.id ?? null;
-  const project = { ...state.project, clips, audioClips };
-  releaseUnusedMedia(project);
-  setProject(project);
+  // media stays loaded so Ctrl+Z can bring the clip back
+  setProject({ ...state.project, clips, audioClips });
   setState({ selectedId: state.selectedId === id ? next : state.selectedId, assetRev: state.assetRev + 1 });
 }
 
@@ -265,54 +309,61 @@ export function setResolution(width: number, height: number): void {
 
 let autosaveOn = false;
 
-/** Loads the last session from IndexedDB, then starts saving changes. */
+/** Loads the last session from IndexedDB, then starts saving changes. Never touches saved data until it is loaded. */
 export async function restoreAndAutosave(): Promise<void> {
-  const loaded = await loadProject();
-  if (loaded) {
-    const { saved, media } = loaded;
-    const project: Project = { ...defaultProject(), ...saved.project, audioClips: saved.project.audioClips ?? [] };
-    const clips: Clip[] = [];
-    for (const c of project.clips) {
-      if (c.kind === 'title') {
-        clips.push(c);
-        continue;
-      }
-      const m = media.get(c.mediaId);
-      try {
-        if (!m) throw new Error('missing');
-        if (!hasMedia(c.mediaId)) {
-          if (c.kind === 'image') await addImageAsset(c.mediaId, m.blob);
-          else await addVideoAsset(c.mediaId, m.blob);
+  let restoredOk = true;
+  try {
+    const loaded = await loadProject();
+    if (loaded) {
+      const { saved, media } = loaded;
+      const project: Project = { ...defaultProject(), ...saved.project, audioClips: saved.project.audioClips ?? [] };
+      const total = project.clips.filter((c) => c.kind !== 'title').length + project.audioClips.length;
+      let done = 0;
+      const tick = () => setState({ loadingMsg: `Opening your last project… (${++done} of ${total} files)` });
+      const load = async (id: string, kind: 'image' | 'video' | 'audio'): Promise<boolean> => {
+        try {
+          const m = media.get(id);
+          if (!m) return false;
+          if (!hasMedia(id)) {
+            if (kind === 'image') await addImageAsset(id, m.blob);
+            else if (kind === 'video') await addVideoAsset(id, m.blob);
+            else await addAudioAsset(id, m.blob);
+          }
+          return true;
+        } catch {
+          return false;
+        } finally {
+          tick();
         }
-        clips.push(c);
-      } catch {
-        /* media gone or undecodable: drop the clip */
-      }
+      };
+      // all files at once: decoding is the slow part
+      const clipOk = await Promise.all(project.clips.map((c) => (c.kind === 'title' ? true : load(c.mediaId, c.kind))));
+      const audioOk = await Promise.all(project.audioClips.map((a) => load(a.mediaId, 'audio')));
+      const clips = project.clips.filter((_, i) => clipOk[i]);
+      const audioClips = project.audioClips.filter((_, i) => audioOk[i]);
+      const lost = project.clips.length - clips.length + project.audioClips.length - audioClips.length;
+      restoredOk = lost === 0;
+      if (clips.length === 0) clips.push(...defaultProject().clips);
+      const restored = { ...project, clips, audioClips };
+      setState({
+        project: restored,
+        fileName: saved.fileName || 'Untitled',
+        selectedId: clips[0]!.id,
+        time: Math.min(1.2, layout(restored).total),
+        assetRev: state.assetRev + 1,
+        notice: lost ? `Opened your last project (${lost} file${lost > 1 ? 's' : ''} could not be reloaded)` : 'Opened your last project',
+      });
     }
-    const audioClips: AudioClip[] = [];
-    for (const a of project.audioClips) {
-      const m = media.get(a.mediaId);
-      try {
-        if (!m) throw new Error('missing');
-        if (!hasMedia(a.mediaId)) await addAudioAsset(a.mediaId, m.blob);
-        audioClips.push(a);
-      } catch {
-        /* skip */
-      }
-    }
-    if (clips.length === 0) clips.push(...defaultProject().clips);
-    const restored = { ...project, clips, audioClips };
-    setState({
-      project: restored,
-      fileName: saved.fileName || 'Untitled',
-      selectedId: clips[0]!.id,
-      time: Math.min(1.2, layout(restored).total),
-      assetRev: state.assetRev + 1,
-      notice: clips.length < project.clips.length ? 'Restored last session (some media could not be reloaded)' : 'Restored last session',
-    });
+  } catch {
+    restoredOk = false;
+  } finally {
+    setState({ loading: false });
   }
   if (autosaveOn) return;
   autosaveOn = true;
+  // Housekeeping: drop stored media no clip uses any more. Skipped if anything failed to load,
+  // so a hiccup can never delete someone's files.
+  if (restoredOk) void saveProject({ project: state.project, fileName: state.fileName }, usedMediaIds(state.project));
   let timer: ReturnType<typeof setTimeout> | undefined;
   let last = state.project;
   let lastName = state.fileName;
@@ -321,9 +372,8 @@ export async function restoreAndAutosave(): Promise<void> {
     last = state.project;
     lastName = state.fileName;
     clearTimeout(timer);
-    timer = setTimeout(() => {
-      void saveProject({ project: state.project, fileName: state.fileName }, usedMediaIds(state.project));
-    }, 700);
+    // no pruning here: undo may still want a removed clip's media
+    timer = setTimeout(() => void saveProject({ project: state.project, fileName: state.fileName }, null), 700);
   });
 }
 

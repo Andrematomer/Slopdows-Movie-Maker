@@ -5,6 +5,7 @@ import { getState, setState, totalDuration, useStore } from '../model/store';
 import { renderFrame } from '../render/renderFrame';
 import { timecode } from './format';
 import { Icon } from './icons';
+import { toggleFullscreen } from './viewControls';
 
 export function PreviewPane() {
   const project = useStore((s) => s.project);
@@ -12,7 +13,6 @@ export function PreviewPane() {
   const playing = useStore((s) => s.playing);
   const assetRev = useStore((s) => s.assetRev);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const screenRef = useRef<HTMLDivElement>(null);
   const total = totalDuration();
 
   // repaint whenever anything visible changes
@@ -64,7 +64,7 @@ export function PreviewPane() {
 
   return (
     <div class="preview">
-      <div class="preview-screen" ref={screenRef} style={{ aspectRatio: aspect }}>
+      <div class="preview-screen" style={{ aspectRatio: aspect }}>
         <canvas ref={canvasRef} />
       </div>
       <input
@@ -81,7 +81,7 @@ export function PreviewPane() {
           {playing ? '⏸ Pause' : '▶ Play'}
         </button>
         <button onClick={() => setState({ playing: false, time: 0 })}>⏹ Stop</button>
-        <button title="Full screen (Esc to leave)" onClick={() => void screenRef.current?.requestFullscreen?.().catch(() => {})}>
+        <button title="Full screen (Esc to leave)" onClick={toggleFullscreen}>
           <Icon name="full" /> Full Screen
         </button>
         <span class="timecode">

@@ -90,7 +90,7 @@ export function defaultProject(): Project {
     width: 640,
     height: 480,
     fps: 30,
-    mode2008: false,
+    mode2008: true,
     clips: [
       {
         id: newId(),

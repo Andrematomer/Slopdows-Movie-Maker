@@ -44,14 +44,16 @@ export async function saveMedia(id: string, blob: Blob, name: string): Promise<v
   }
 }
 
-export async function saveProject(data: SavedProject, keepMedia: Set<string>): Promise<void> {
+export async function saveProject(data: SavedProject, keepMedia: Set<string> | null): Promise<void> {
   try {
     const db = await open();
     const tx = db.transaction(['kv', 'media'], 'readwrite');
     tx.objectStore('kv').put(data, 'project');
-    const media = tx.objectStore('media');
-    const keys = await wrap(media.getAllKeys());
-    for (const k of keys) if (!keepMedia.has(String(k))) media.delete(k);
+    if (keepMedia) {
+      const media = tx.objectStore('media');
+      const keys = await wrap(media.getAllKeys());
+      for (const k of keys) if (!keepMedia.has(String(k))) media.delete(k);
+    }
     await new Promise<void>((res, rej) => {
       tx.oncomplete = () => res();
       tx.onerror = () => rej(tx.error);

@@ -1,58 +1,54 @@
-# Slopdows Movie Faker
+# Win Movie Faker
 
-> **🚧 WORK IN PROGRESS — nothing here works yet. Come back later. 🚧**
+Make a video that looks like it was edited in 2008 and uploaded to YouTube from a laptop webcam.
+Win Movie Faker is a video editor that runs entirely in your browser and imitates the look of a
+2000s Windows XP movie editor, down to the star wipes.
 
-A fake-nostalgic video editor that runs 100% in your browser. It imitates the look of a
-2000s Windows XP movie editor and the quality of a 2008 YouTube upload.
+![Win Movie Faker screenshot](docs/screenshot.jpg)
 
-No server. No uploads. Your videos never leave your computer.
+**[Open Win Movie Faker](https://andrematomer.github.io/Slopdows-Movie-Maker/)**
 
-## Planned
+No install. No account. No upload: your files never leave your computer.
 
-- Windows XP "Luna" style window, menus, toolbar and storyboard
-- Title cards: white text on deep blue, with fades
-- Ugly 2000s transitions (star wipe and friends)
-- "2008 YouTube mode": 4:3, low bitrate, tinny laptop-mic audio
-- Parody screen-recorder watermarks (toggle on and off)
-- Export to MP4, in the browser
+## What you can do
+
+- Import **pictures, videos and music**, drag clips around on the storyboard, trim and split them.
+- Add **title cards** (white text on deep blue, with fades) and credits.
+- Glue clips together with **transitions**: Star Wipe, Iris, Checkerboard, Pixelate, Spin In and Fade.
+- Turn on **2008 YouTube mode (uglier)**: blurry 4:3 picture, tinny sound, small file. On by default.
+- Add parody **screen-recorder watermarks** (off by default, text is editable).
+- Save the result as an **MP4** straight from the browser.
+- Your project is **autosaved** in your browser and reopens where you left off.
+- **Ctrl+Z** undoes, **Ctrl+Y** redoes, **Delete** removes the selected clip.
+
+## Good to know
+
+- Use a recent Chrome or Edge for the best results. Firefox and Safari should work too.
+- Only files your browser can play can be imported (MP4, WebM, MOV, MP3, WAV, AAC, Opus and
+  friends). Old formats like WMV or AVI are not supported.
+- Autosave keeps copies of your files inside the browser. Clearing site data deletes them.
+- Very long videos or songs use a lot of memory, and saving a movie can make the tab sluggish.
+- The app is still being polished, so rough edges are expected.
 
 ## Not affiliated with Microsoft
 
-This is a parody and a fan project. It is not made by, endorsed by, or connected to
-Microsoft. It uses no Microsoft code, icons, sounds, logos or fonts.
+Win Movie Faker is a parody and a fan project. It is not made by, endorsed by, or connected to
+Microsoft. It uses no Microsoft code, icons, sounds, logos or fonts. The interface uses the fonts
+already installed on your computer.
 
-## Status
-
-Work in progress, but usable:
-
-- Working: XP-style window, title cards, pictures, **video and audio import** (decoded in the
-  browser), trim (start + length), split at playhead, volume, a music lane, drag to reorder,
-  7 transitions (cut, fade, star wipe, iris, checkerboard, pixelate, spin), two parody
-  watermarks, 2008 mode (4:3, blurry, telephone-band audio plus hiss), full screen preview,
-  **autosave** (project and media are kept in this browser's IndexedDB and restored on load),
-  MP4 export in the browser with sound (AAC, or Opus if AAC is unavailable).
-- Export uses H.264 when the browser can encode it, otherwise VP9 inside an MP4.
-
-### Known limitations
-
-- **No converter for odd formats.** Only what your browser can decode works (MP4/H.264, WebM,
-  MOV, MP3, WAV, AAC, Opus...). WMV, AVI, HEVC and similar are rejected with a message.
-  An ffmpeg.wasm fallback was dropped: single-threaded it is slow and ~30 MB, and it
-  cannot be made multithreaded on GitHub Pages.
-- Export runs on the main thread (the tab may feel sluggish), not in a Worker.
-- Whole audio tracks are decoded into memory, so very long audio files are heavy.
-- Autosave stores copies of your media in the browser; clearing site data deletes them.
-- Not yet: extra transitions from the plan (Random dissolve, Shatter), moving titles.
-
-See `CLAUDE.md` for the decisions made so far.
-
-## Develop
+## Run it yourself
 
 ```
 npm install
-npm run dev     # local dev server
-npm run build   # type-check + production build into dist/
+npm run dev      # local dev server
+npm run build    # type-check + production build into dist/
 ```
+
+It is a static site (Vite + TypeScript + Preact + [XP.css](https://botoxparty.github.io/XP.css/),
+exporting with WebCodecs and [Mediabunny](https://mediabunny.dev)), deployed to GitHub Pages by
+the workflow in `.github/workflows`.
+
+`CLAUDE.md` has the design decisions.
 
 ## License
 

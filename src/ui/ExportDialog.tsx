@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { exportMovie } from '../export/exporter';
+import { FriendlyError, exportMovie } from '../export/exporter';
 import { assets } from '../model/assets';
 import { getState } from '../model/store';
 
@@ -23,7 +23,11 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
       })
       .catch((err: unknown) => {
         if (err instanceof DOMException && err.name === 'AbortError') return onClose();
-        setPhase({ kind: 'error', message: err instanceof Error ? err.message : String(err) });
+        console.error(err);
+        setPhase({ kind: 'error', message:
+            err instanceof FriendlyError
+              ? err.message
+              : "Something went wrong while saving. Try again, or try the latest Chrome or Edge." });
       });
     return () => ctl.abort();
   }, []);

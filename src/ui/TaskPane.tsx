@@ -61,8 +61,9 @@ export function TaskPane({ onImport, onAddTitle, onExport }: Props) {
         />
         <div class="check-row">
           <input id="cb-2008" type="checkbox" checked={project.mode2008} onChange={(e) => setMode2008((e.target as HTMLInputElement).checked)} />
-          <label for="cb-2008">2008 YouTube mode</label>
+          <label for="cb-2008" title="Worse picture and worse sound, like a video uploaded in 2008">2008 YouTube mode (uglier)</label>
         </div>
+        <p class="hint-small">Blurrier picture and tinny sound, like a video uploaded in 2008.</p>
         <label>
           Size:{' '}
           <select
