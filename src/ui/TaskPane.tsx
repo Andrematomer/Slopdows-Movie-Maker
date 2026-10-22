@@ -9,7 +9,7 @@ import {
   updateClip,
   useStore,
 } from '../model/store';
-import { TRANSITIONS, type Clip } from '../model/types';
+import { TRANSITIONS, type Clip, type PictureFit } from '../model/types';
 import { Icon } from './icons';
 
 const num = (e: Event) => Number((e.target as HTMLInputElement).value);
@@ -131,6 +131,31 @@ export function TaskPane({ onImport, onAddTitle, onExport }: Props) {
                   onInput={(e) => updateClip(selected.id, { volume: num(e) })}
                 />
               </label>
+            </>
+          )}
+          {selected.kind !== 'title' && (
+            <>
+              <label>
+                Picture fit{' '}
+                <select
+                  value={selected.fit ?? 'fit'}
+                  onChange={(e) => updateClip(selected.id, { fit: (e.target as HTMLSelectElement).value as PictureFit })}
+                >
+                  <option value="fit">Fit (black bars)</option>
+                  <option value="fill">Fill (crop edges)</option>
+                  <option value="stretch">Stretch (distort)</option>
+                </select>
+              </label>
+              <div class="check-row">
+                <input
+                  id="cb-oldcam"
+                  type="checkbox"
+                  checked={!!selected.oldCamera}
+                  onChange={(e) => updateClip(selected.id, { oldCamera: (e.target as HTMLInputElement).checked })}
+                />
+                <label for="cb-oldcam" title="24 fps, grain, harsh contrast and colours">Old camera look</label>
+              </div>
+              <p class="hint-small">24 fps, grainy, too much contrast and colour, like an early digital camcorder.</p>
             </>
           )}
           <label>

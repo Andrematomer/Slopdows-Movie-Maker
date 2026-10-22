@@ -17,6 +17,8 @@ export const TRANSITIONS: { kind: TransitionKind; label: string }[] = [
   { kind: 'spin', label: 'Spin In' },
 ];
 
+export type PictureFit = 'fit' | 'fill' | 'stretch';
+
 interface BaseClip {
   id: string;
   /** seconds */
@@ -31,14 +33,22 @@ export interface TitleClip extends BaseClip {
   subtitle: string;
 }
 
-export interface ImageClip extends BaseClip {
+/** Options shared by pictures and videos. */
+interface PictureOptions {
+  /** how the picture meets the 4:3 screen (default 'fit') */
+  fit?: PictureFit;
+  /** "Old camera" look: 24 fps, grain, harsh contrast and colour */
+  oldCamera?: boolean;
+}
+
+export interface ImageClip extends BaseClip, PictureOptions {
   kind: 'image';
   name: string;
   /** key into the media store (same as the clip id for pictures) */
   mediaId: string;
 }
 
-export interface VideoClip extends BaseClip {
+export interface VideoClip extends BaseClip, PictureOptions {
   kind: 'video';
   name: string;
   mediaId: string;

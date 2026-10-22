@@ -15,6 +15,8 @@ No install. No account. No upload: your files never leave your computer.
 - Import **pictures, videos and music**, drag clips around on the storyboard, trim and split them.
 - Add **title cards** (white text on deep blue, with fades) and credits.
 - Glue clips together with **transitions**: Star Wipe, Iris, Checkerboard, Pixelate, Spin In and Fade.
+- Pick how each picture or video meets the 4:3 screen: **Fit** (black bars), **Fill** (crop) or **Stretch**.
+- Give a clip the **Old camera look**: 24 fps, sensor grain, and harsh early-digital contrast and colour.
 - Turn on **2008 YouTube mode (uglier)**: blurry 4:3 picture, tinny sound, small file. On by default.
 - Add parody **screen-recorder watermarks** (off by default, text is editable).
 - Save the result as an **MP4** straight from the browser.

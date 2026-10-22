@@ -1,5 +1,6 @@
 import { CanvasSink, Input, ALL_FORMATS, AudioBufferSink, BlobSource } from 'mediabunny';
 import type { Assets } from '../render/types';
+import { snap24 } from '../render/oldCamera';
 import { layout } from './layout';
 import type { Project } from './types';
 
@@ -181,8 +182,9 @@ export function usedMediaIds(project: Project): Set<string> {
 // ---------- frame access for the renderer ----------
 
 /** Source-file time shown by a video clip at `local` seconds into the clip. */
-export function sourceTime(trimStart: number, local: number, duration: number): number {
-  return trimStart + Math.max(0, Math.min(duration, local));
+export function sourceTime(trimStart: number, local: number, duration: number, oldCamera = false): number {
+  const l = Math.max(0, Math.min(duration, local));
+  return trimStart + (oldCamera ? snap24(l) : l);
 }
 
 /**
@@ -199,7 +201,7 @@ export async function prepare(project: Project, time: number): Promise<void> {
       if (clip.kind !== 'video') return;
       const m = media.get(clip.mediaId);
       if (m?.kind !== 'video') return;
-      const st = Math.min(sourceTime(clip.trimStart, t - seg.start, clip.duration), Math.max(0, m.duration - 0.001));
+      const st = Math.min(sourceTime(clip.trimStart, t - seg.start, clip.duration, !!clip.oldCamera), Math.max(0, m.duration - 0.001));
       const cached = frames.get(clip.id);
       if (cached && st >= cached.ts && st < cached.ts + cached.dur) return;
       const f = await m.sink.getCanvas(st);
