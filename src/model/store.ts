@@ -15,7 +15,10 @@ import { defaultProject, newId, type AudioClip, type Clip, type Project, type Tr
 
 export interface AppState {
   project: Project;
+  /** the clip last clicked (anchor for shift-select, what the playhead jumps to) */
   selectedId: string | null;
+  /** every selected clip id (pictures/videos/titles and audio clips) */
+  selectedIds: string[];
   /** playhead, seconds */
   time: number;
   playing: boolean;
@@ -32,6 +35,7 @@ export interface AppState {
 let state: AppState = {
   project: defaultProject(),
   selectedId: null,
+  selectedIds: [],
   time: 1.2, // past the title's fade-in so the first preview isn't a blank blue screen
   playing: false,
   assetRev: 0,
@@ -41,12 +45,15 @@ let state: AppState = {
   loadingMsg: 'Opening your last project…',
 };
 state.selectedId = state.project.clips[0]!.id;
+state.selectedIds = [state.selectedId];
 
 const listeners = new Set<() => void>();
 
 export const getState = (): AppState => state;
 
 export function setState(patch: Partial<AppState>): void {
+  // code that only sets selectedId means "select just that one"
+  if ('selectedId' in patch && !('selectedIds' in patch)) patch = { ...patch, selectedIds: patch.selectedId ? [patch.selectedId] : [] };
   state = { ...state, ...patch };
   listeners.forEach((l) => l());
 }
@@ -75,12 +82,14 @@ const MAX_UNDO = 100;
 
 function applyProject(project: Project): void {
   const { total } = layout(project);
-  const sel = state.selectedId;
-  const stillThere = sel && (project.clips.some((c) => c.id === sel) || project.audioClips.some((a) => a.id === sel));
+  const exists = (id: string) => project.clips.some((c) => c.id === id) || project.audioClips.some((a) => a.id === id);
+  const ids = state.selectedIds.filter(exists);
+  const primary = state.selectedId && exists(state.selectedId) ? state.selectedId : (ids[0] ?? project.clips[0]?.id ?? null);
   setState({
     project,
     time: Math.min(state.time, total),
-    selectedId: stillThere ? sel : (project.clips[0]?.id ?? null),
+    selectedId: primary,
+    selectedIds: ids.length ? ids : primary ? [primary] : [],
     assetRev: state.assetRev + 1,
   });
 }
@@ -120,6 +129,69 @@ export function totalDuration(): number {
   return layout(state.project).total;
 }
 
+// ---------- selection, playhead ----------
+
+/** Where the playhead goes to show a clip: just after its incoming transition, past a title's fade-in. */
+function viewTimeFor(id: string): number | null {
+  const audio = state.project.audioClips.find((a) => a.id === id);
+  if (audio) return audio.start;
+  const seg = layout(state.project).segments.find((x) => x.clip.id === id);
+  if (!seg) return null;
+  const visible = seg.end - seg.start - seg.overlap;
+  const t = seg.start + seg.overlap + (seg.clip.kind === 'title' ? Math.min(1.2, visible / 2) : 0);
+  return Math.min(t, Math.max(0, layout(state.project).total - 0.01));
+}
+
+/** Every selectable id in storyboard order (clips, then the audio lane). */
+function orderedIds(): string[] {
+  return [...state.project.clips.map((c) => c.id), ...state.project.audioClips.map((a) => a.id)];
+}
+
+/** Click semantics like Explorer: plain = only this, ctrl/cmd = toggle, shift = range from the anchor. */
+export function selectClip(id: string, mode: 'only' | 'toggle' | 'range' = 'only'): void {
+  const order = orderedIds();
+  let ids: string[];
+  let primary: string | null = id;
+  if (mode === 'toggle') {
+    const has = state.selectedIds.includes(id);
+    ids = has ? state.selectedIds.filter((x) => x !== id) : [...state.selectedIds, id];
+    if (has) primary = ids[ids.length - 1] ?? null;
+  } else if (mode === 'range' && state.selectedId && order.includes(state.selectedId)) {
+    const a = order.indexOf(state.selectedId);
+    const b = order.indexOf(id);
+    ids = order.slice(Math.min(a, b), Math.max(a, b) + 1);
+    primary = state.selectedId; // keep the anchor so the range can be re-aimed
+    const t = viewTimeFor(id);
+    return setState({ selectedId: primary, selectedIds: ids, playing: false, ...(t === null ? {} : { time: t }) });
+  } else {
+    ids = [id];
+  }
+  const t: number | null = primary ? viewTimeFor(primary) : null;
+  setState({ selectedId: primary, selectedIds: ids, playing: false, ...(t === null || mode === 'toggle' && !ids.includes(id) ? {} : { time: t }) });
+}
+
+export function selectAll(): void {
+  const ids = orderedIds();
+  if (ids.length) setState({ selectedIds: ids, selectedId: state.selectedId ?? ids[0]! });
+}
+
+/** Left/Right arrows: previous or next clip, staying in the lane (storyboard or audio) of the current one. */
+export function selectRelative(dir: -1 | 1, extend = false): void {
+  const id = state.selectedId;
+  const inAudio = !!id && state.project.audioClips.some((a) => a.id === id);
+  const lane = inAudio ? state.project.audioClips.map((a) => a.id) : state.project.clips.map((c) => c.id);
+  if (lane.length === 0) return;
+  const i = id ? lane.indexOf(id) : -1;
+  const next = lane[Math.max(0, Math.min(lane.length - 1, i < 0 ? 0 : i + dir))]!;
+  selectClip(next, extend ? 'range' : 'only');
+}
+
+export function togglePlay(): void {
+  const total = totalDuration();
+  if (state.playing) return setState({ playing: false });
+  setState({ playing: true, time: state.time >= total - 0.05 ? 0 : state.time });
+}
+
 // ---------- actions ----------
 
 export function newProject(): void {
@@ -149,7 +221,7 @@ export function addTitle(): void {
     transitionIn: 'star',
   };
   setProject({ ...state.project, clips: [...state.project.clips, clip] });
-  setState({ selectedId: clip.id });
+  selectClip(clip.id);
 }
 
 type Kind = 'image' | 'video' | 'audio';
@@ -215,26 +287,37 @@ export async function addMedia(files: File[]): Promise<void> {
       audioClips: [...state.project.audioClips, ...audio],
     });
     const last = clips[clips.length - 1] ?? audio[audio.length - 1];
-    setState({ selectedId: last!.id, assetRev: state.assetRev + 1 });
+    setState({ assetRev: state.assetRev + 1 });
+    selectClip(last!.id);
   }
   setState({ notice: problems.length ? `Skipped: ${problems.join(' | ')}` : 'Ready' });
 }
 
-export function removeClip(id: string): void {
-  const clips = state.project.clips.filter((c) => c.id !== id);
-  const audioClips = state.project.audioClips.filter((a) => a.id !== id);
-  const idx = state.project.clips.findIndex((c) => c.id === id);
-  const next = clips[Math.min(idx, clips.length - 1)]?.id ?? null;
-  // media stays loaded so Ctrl+Z can bring the clip back
+export function removeClips(ids: string[]): void {
+  if (ids.length === 0) return;
+  const gone = new Set(ids);
+  const clips = state.project.clips.filter((c) => !gone.has(c.id));
+  const audioClips = state.project.audioClips.filter((a) => !gone.has(a.id));
+  const firstIdx = state.project.clips.findIndex((c) => gone.has(c.id));
+  const next = firstIdx < 0 ? null : (clips[Math.min(firstIdx, clips.length - 1)]?.id ?? null);
+  // media stays loaded so Ctrl+Z can bring the clips back
   setProject({ ...state.project, clips, audioClips });
-  setState({ selectedId: state.selectedId === id ? next : state.selectedId, assetRev: state.assetRev + 1 });
+  const keep = state.selectedIds.filter((x) => !gone.has(x));
+  setState({
+    selectedId: keep[0] ?? next,
+    selectedIds: keep.length ? keep : next ? [next] : [],
+    assetRev: state.assetRev + 1,
+  });
 }
+
+export const removeClip = (id: string): void => removeClips([id]);
 
 /** Cuts the selected clip in two at the playhead. */
 export function splitAtPlayhead(): void {
   const id = state.selectedId;
   const t = state.time;
   const MIN = 0.3;
+  if (state.selectedIds.length > 1) return setState({ notice: 'Select a single clip to split it.' });
   const audio = state.project.audioClips.find((a) => a.id === id);
   if (audio) {
     const local = t - audio.start;
@@ -274,6 +357,20 @@ export function updateClip(id: string, patch: Partial<Clip>): void {
   setProject({ ...state.project, clips });
 }
 
+/** Applies the same change to many clips at once (one undo step). `applies` skips clips the field means nothing for. */
+export function patchClips(ids: string[], patch: Record<string, unknown>, applies: (c: Clip) => boolean = () => true): void {
+  const set = new Set(ids);
+  setProject({
+    ...state.project,
+    clips: state.project.clips.map((c) => (set.has(c.id) && applies(c) ? ({ ...c, ...patch } as Clip) : c)),
+  });
+}
+
+export function patchAudioClips(ids: string[], patch: Partial<AudioClip>): void {
+  const set = new Set(ids);
+  setProject({ ...state.project, audioClips: state.project.audioClips.map((a) => (set.has(a.id) ? { ...a, ...patch } : a)) });
+}
+
 export function updateAudioClip(id: string, patch: Partial<AudioClip>): void {
   setProject({ ...state.project, audioClips: state.project.audioClips.map((a) => (a.id === id ? { ...a, ...patch } : a)) });
 }
@@ -286,18 +383,15 @@ export function patchProject(patch: Partial<Project>): void {
   setProject({ ...state.project, ...patch });
 }
 
-export function patchWatermarks(patch: Partial<Project['watermarks']>): void {
-  setProject({ ...state.project, watermarks: { ...state.project.watermarks, ...patch } });
-}
-
 /** One switch for the whole 2008 look: forces 4:3 and turns on the mush. */
 export function setMode2008(on: boolean): void {
   const p = state.project;
   setProject({
     ...p,
     mode2008: on,
-    width: on ? 640 : p.width,
-    height: on ? 480 : p.height,
+    // the 2008 look is 4:3; keep a 4:3 size the user already picked
+    width: on && p.width * 3 !== p.height * 4 ? 640 : p.width,
+    height: on && p.width * 3 !== p.height * 4 ? 480 : p.height,
   });
 }
 
@@ -317,6 +411,16 @@ export async function restoreAndAutosave(): Promise<void> {
     if (loaded) {
       const { saved, media } = loaded;
       const project: Project = { ...defaultProject(), ...saved.project, audioClips: saved.project.audioClips ?? [] };
+      // older saves had one project-wide watermark setting: copy it onto every picture/video clip
+      const legacy = saved.project.watermarks;
+      if (legacy) {
+        project.clips = project.clips.map((c) =>
+          c.kind === 'title'
+            ? c
+            : { ...c, wmHyper: legacy.hypercam, wmSite: legacy.bandi, wmHyperText: legacy.hypercamText, wmSiteText: legacy.bandiText },
+        );
+        delete project.watermarks;
+      }
       const total = project.clips.filter((c) => c.kind !== 'title').length + project.audioClips.length;
       let done = 0;
       const tick = () => setState({ loadingMsg: `Opening your last project… (${++done} of ${total} files)` });

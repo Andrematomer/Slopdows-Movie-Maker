@@ -18,10 +18,12 @@ No install. No account. No upload: your files never leave your computer.
 - Pick how each picture or video meets the 4:3 screen: **Fit** (black bars), **Fill** (crop) or **Stretch**.
 - Give a clip the **Old camera look**: 24 fps, sensor grain, and harsh early-digital contrast and colour.
 - Turn on **2008 YouTube mode (uglier)**: blurry 4:3 picture, tinny sound, small file. On by default.
-- Add parody **screen-recorder watermarks** (off by default, text is editable).
+- Add parody **screen-recorder watermarks** per clip (off by default, text is editable), so camera and screen-recording clips can live in one project.
 - Save the result as an **MP4** straight from the browser.
 - Your project is **autosaved** in your browser and reopens where you left off.
-- **Ctrl+Z** undoes, **Ctrl+Y** redoes, **Delete** removes the selected clip.
+- **Space** plays and pauses, **Left/Right** pick the previous or next clip, **Shift-click** selects a range, **Ctrl-click** adds or removes one, **Ctrl+A** selects everything. Changes apply to every selected clip at once.
+- **Ctrl+Z** undoes, **Ctrl+Y** redoes, **Delete** removes the selected clips.
+- Sizes: three recommended retro sizes, plus HD, Full HD and more behind an "unlock" checkbox.
 
 ## Good to know
 

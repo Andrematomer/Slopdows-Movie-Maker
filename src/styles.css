@@ -83,3 +83,4 @@ body { background: #3a6ea5; font-size: 12px; }
 .preview-screen:fullscreen canvas { width: auto; height: auto; max-width: 100vw; max-height: 100vh; aspect-ratio: 4 / 3; }
 .tr-icon { border: 1px solid #1c1c1c; margin-bottom: 2px; }
 .hint-small { margin: 0 0 6px 18px; font-size: 10px; color: #3a4a8a; }
+.taskpane a.disabled { color: #8a93b5; cursor: default; text-decoration: none; }

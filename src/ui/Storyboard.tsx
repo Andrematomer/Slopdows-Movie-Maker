@@ -1,13 +1,13 @@
 import { useState } from 'preact/hooks';
 import { getThumbUrl } from '../model/assets';
-import { addMedia, moveClip, setState, setTransition, useStore } from '../model/store';
+import { addMedia, moveClip, selectClip, setTransition, useStore } from '../model/store';
 import { TRANSITIONS } from '../model/types';
 import { Icon, TransitionIcon } from './icons';
 import { randomTransition } from '../render/transitions';
 
 export function Storyboard() {
   const clips = useStore((s) => s.project.clips);
-  const selectedId = useStore((s) => s.selectedId);
+  const selectedIds = useStore((s) => s.selectedIds);
   const audioClips = useStore((s) => s.project.audioClips);
   useStore((s) => s.assetRev); // thumbnails appear after decoding
   const [dragFrom, setDragFrom] = useState<number | null>(null);
@@ -53,7 +53,7 @@ export function Storyboard() {
               </button>
             )}
             <div
-              class={`tile ${selectedId === clip.id ? 'selected' : ''}`}
+              class={`tile ${selectedIds.includes(clip.id) ? 'selected' : ''}`}
               draggable
               onDragStart={(e) => {
                 setDragFrom(i);
@@ -68,7 +68,7 @@ export function Storyboard() {
                   setDragFrom(null);
                 }
               }}
-              onClick={() => setState({ selectedId: clip.id })}
+              onClick={(e) => selectClip(clip.id, e.shiftKey ? 'range' : e.ctrlKey || e.metaKey ? 'toggle' : 'only')}
               tabIndex={0}
             >
               <div class="thumb">
@@ -93,9 +93,9 @@ export function Storyboard() {
           {audioClips.map((a) => (
             <button
               key={a.id}
-              class={`audio-bar ${selectedId === a.id ? 'selected' : ''}`}
+              class={`audio-bar ${selectedIds.includes(a.id) ? 'selected' : ''}`}
               style={{ width: `${Math.max(40, a.duration * 12)}px`, marginLeft: `${Math.max(0, a.start * 12)}px` }}
-              onClick={() => setState({ selectedId: a.id })}
+              onClick={(e) => selectClip(a.id, e.shiftKey ? 'range' : e.ctrlKey || e.metaKey ? 'toggle' : 'only')}
             >
               {a.name}
             </button>

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'preact/hooks';
 import { assets, prepare } from '../model/assets';
 import { startPreviewAudio, stopPreviewAudio } from '../media/mix';
-import { getState, setState, totalDuration, useStore } from '../model/store';
+import { getState, setState, togglePlay, totalDuration, useStore } from '../model/store';
 import { renderFrame } from '../render/renderFrame';
 import { timecode } from './format';
 import { Icon } from './icons';
@@ -77,7 +77,7 @@ export function PreviewPane() {
         onInput={(e) => setState({ time: Number((e.target as HTMLInputElement).value), playing: false })}
       />
       <div class="transport">
-        <button onClick={() => setState({ playing: !playing, time: playing || time < total ? time : 0 })}>
+        <button onClick={togglePlay}>
           {playing ? '⏸ Pause' : '▶ Play'}
         </button>
         <button onClick={() => setState({ playing: false, time: 0 })}>⏹ Stop</button>

@@ -4,11 +4,14 @@ import {
   canRedo,
   canUndo,
   redo,
+  removeClips,
+  selectAll,
+  selectRelative,
+  togglePlay,
   undo,
   splitAtPlayhead,
   addTitle,
   newProject,
-  removeClip,
   setMode2008,
   setState,
   getState,
@@ -34,24 +37,41 @@ export function App() {
   const loadingMsg = useStore((s) => s.loadingMsg);
   useStore((s) => s.project); // so Undo/Redo menu items refresh
 
-  // keyboard: Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z / Delete (not while typing in a box)
+  // keyboard: Space play/pause, Ctrl+Z/Y undo/redo, Ctrl+A select all, arrows, Delete.
+  // Skipped while typing in a box (so text editing keeps its normal keys).
   useEffect(() => {
+    const typingIn = (el: HTMLElement | null) =>
+      !!el && (el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || (el.tagName === 'INPUT' && !['range', 'checkbox', 'button'].includes((el as HTMLInputElement).type)));
     const onKey = (e: KeyboardEvent) => {
       if (getState().loading) return;
       const el = e.target as HTMLElement | null;
-      const typing = !!el && (el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || (el.tagName === 'INPUT' && !['range', 'checkbox'].includes((el as HTMLInputElement).type)));
-      if (typing) return;
+      if (typingIn(el)) return;
       const mod = e.ctrlKey || e.metaKey;
       const k = e.key.toLowerCase();
-      if (mod && k === 'z' && !e.shiftKey) (e.preventDefault(), undo());
+      if (e.key === ' ') {
+        e.preventDefault(); // also stops a focused button from "clicking"
+        if (!e.repeat) togglePlay();
+      } else if (mod && k === 'z' && !e.shiftKey) (e.preventDefault(), undo());
       else if (mod && (k === 'y' || (k === 'z' && e.shiftKey))) (e.preventDefault(), redo());
-      else if (e.key === 'Delete') {
-        const id = getState().selectedId;
-        if (id) (e.preventDefault(), removeClip(id));
+      else if (mod && k === 'a') (e.preventDefault(), selectAll());
+      else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !mod && !(el?.tagName === 'INPUT' && (el as HTMLInputElement).type === 'range')) {
+        e.preventDefault();
+        selectRelative(e.key === 'ArrowLeft' ? -1 : 1, e.shiftKey);
+      } else if (e.key === 'Delete') {
+        e.preventDefault();
+        removeClips(getState().selectedIds);
       }
     };
+    // a focused button would otherwise fire its click when Space is released
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === ' ' && !typingIn(e.target as HTMLElement | null)) e.preventDefault();
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('keyup', onKeyUp);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('keyup', onKeyUp);
+    };
   }, []);
 
   const importPictures = () => fileInput.current?.click();
@@ -71,9 +91,10 @@ export function App() {
       items: [
         { label: 'Undo (Ctrl+Z)', onClick: undo, disabled: !canUndo() },
         { label: 'Redo (Ctrl+Y)', onClick: redo, disabled: !canRedo() },
+        { label: 'Select All (Ctrl+A)', onClick: selectAll },
         'sep',
         { label: 'Split Clip at Playhead', onClick: splitAtPlayhead, disabled: !selectedId },
-        { label: 'Remove Clip', onClick: () => selectedId && removeClip(selectedId), disabled: !selectedId },
+        { label: 'Remove Clip', onClick: () => removeClips(getState().selectedIds), disabled: !selectedId },
       ],
     },
     {
@@ -95,7 +116,7 @@ export function App() {
     {
       label: 'Play',
       items: [
-        { label: playing ? 'Pause' : 'Play Storyboard', onClick: () => setState({ playing: !getState().playing }) },
+        { label: playing ? 'Pause (Space)' : 'Play Storyboard (Space)', onClick: togglePlay },
         { label: 'Stop', onClick: () => setState({ playing: false, time: 0 }) },
       ],
     },

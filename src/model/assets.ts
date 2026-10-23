@@ -82,8 +82,8 @@ export async function addVideoAsset(id: string, file: Blob): Promise<{ duration:
     const duration = await input.computeDuration();
     const width = vt.displayWidth;
     const height = vt.displayHeight;
-    // decode at most the size we will ever draw (project is <= 800x600)
-    const scale = Math.min(1, 800 / width, 600 / height);
+    // decode at most Full HD: enough for any project size we offer short of 4K
+    const scale = Math.min(1, 1920 / width, 1080 / height);
     const sink = new CanvasSink(vt, {
       width: Math.max(2, Math.round(width * scale)),
       height: Math.max(2, Math.round(height * scale)),

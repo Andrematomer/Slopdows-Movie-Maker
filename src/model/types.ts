@@ -39,7 +39,15 @@ interface PictureOptions {
   fit?: PictureFit;
   /** "Old camera" look: 24 fps, grain, harsh contrast and colour */
   oldCamera?: boolean;
+  /** parody screen-recorder watermark (top left) and website watermark (top centre), per clip */
+  wmHyper?: boolean;
+  wmSite?: boolean;
+  wmHyperText?: string;
+  wmSiteText?: string;
 }
+
+export const DEFAULT_HYPER_TEXT = 'Unregistered HyperClam 2';
+export const DEFAULT_SITE_TEXT = 'www.BandiCRAM.com';
 
 export interface ImageClip extends BaseClip, PictureOptions {
   kind: 'image';
@@ -88,7 +96,8 @@ export interface Project {
   mode2008: boolean;
   clips: Clip[];
   audioClips: AudioClip[];
-  watermarks: Watermarks;
+  /** old projects (before watermarks became per clip); only read when migrating */
+  watermarks?: Watermarks;
 }
 
 export function newId(): string {
@@ -112,11 +121,5 @@ export function defaultProject(): Project {
       },
     ],
     audioClips: [],
-    watermarks: {
-      hypercam: false,
-      hypercamText: 'Unregistered HyperClam 2',
-      bandi: false,
-      bandiText: 'www.BandiCRAM.com',
-    },
   };
 }

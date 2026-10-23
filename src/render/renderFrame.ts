@@ -1,5 +1,5 @@
 import { layout, type Segment } from '../model/layout';
-import type { PictureFit, Project } from '../model/types';
+import { DEFAULT_HYPER_TEXT, DEFAULT_SITE_TEXT, type ImageClip, type PictureFit, type Project, type VideoClip } from '../model/types';
 import { OLD_CAMERA_FPS, applyOldCamera, scratchContext, snap24 } from './oldCamera';
 import { drawTitleCard } from './titleCard';
 import { drawTransition, pixelate } from './transitions';
@@ -35,6 +35,7 @@ function drawSegment(ctx: Ctx, project: Project, seg: Segment, t: number, assets
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, w, h);
     if (img) drawPicture(ctx, w, h, img, fit);
+    drawClipWatermarks(ctx, w, h, clip);
     return;
   }
   // old camera: paint on a scratch canvas, grade it, then copy it over (keeps transitions clean)
@@ -44,6 +45,17 @@ function drawSegment(ctx: Ctx, project: Project, seg: Segment, t: number, assets
   if (img) drawPicture(sc, w, h, img, fit);
   applyOldCamera(sc, w, h, Math.round(snap24(t) * OLD_CAMERA_FPS));
   ctx.drawImage(sc.canvas as CanvasImageSource, 0, 0);
+  drawClipWatermarks(ctx, w, h, clip);
+}
+
+function drawClipWatermarks(ctx: Ctx, w: number, h: number, clip: ImageClip | VideoClip): void {
+  if (!clip.wmHyper && !clip.wmSite) return;
+  drawWatermarks(ctx, w, h, {
+    hypercam: !!clip.wmHyper,
+    hypercamText: clip.wmHyperText ?? DEFAULT_HYPER_TEXT,
+    bandi: !!clip.wmSite,
+    bandiText: clip.wmSiteText ?? DEFAULT_SITE_TEXT,
+  });
 }
 
 /**
@@ -83,11 +95,9 @@ export function renderFrame(ctx: Ctx, project: Project, time: number, assets: As
     }
   }
 
-  drawWatermarks(ctx, w, h, project.watermarks);
-
   if (project.mode2008) {
     // cheap-webcam look: the image gets mushed, and the encoder will mush it more
-    pixelate(ctx, w, h, 2);
+    pixelate(ctx, w, h, Math.max(2, Math.round(h / 240))); // blockier on big canvases so it stays visible
   }
   ctx.restore();
 }
