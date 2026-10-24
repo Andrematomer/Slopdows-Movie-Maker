@@ -8,6 +8,7 @@ import {
   selectAll,
   selectRelative,
   togglePlay,
+  trimAtPlayhead,
   undo,
   splitAtPlayhead,
   addTitle,
@@ -54,6 +55,9 @@ export function App() {
       } else if (mod && k === 'z' && !e.shiftKey) (e.preventDefault(), undo());
       else if (mod && (k === 'y' || (k === 'z' && e.shiftKey))) (e.preventDefault(), redo());
       else if (mod && k === 'a') (e.preventDefault(), selectAll());
+      else if (!mod && k === 'i') trimAtPlayhead('start');
+      else if (!mod && k === 'o') trimAtPlayhead('end');
+      else if (!mod && k === 's') splitAtPlayhead();
       else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !mod && !(el?.tagName === 'INPUT' && (el as HTMLInputElement).type === 'range')) {
         e.preventDefault();
         selectRelative(e.key === 'ArrowLeft' ? -1 : 1, e.shiftKey);
@@ -93,8 +97,7 @@ export function App() {
         { label: 'Redo (Ctrl+Y)', onClick: redo, disabled: !canRedo() },
         { label: 'Select All (Ctrl+A)', onClick: selectAll },
         'sep',
-        { label: 'Split Clip at Playhead', onClick: splitAtPlayhead, disabled: !selectedId },
-        { label: 'Remove Clip', onClick: () => removeClips(getState().selectedIds), disabled: !selectedId },
+                { label: 'Remove Clip', onClick: () => removeClips(getState().selectedIds), disabled: !selectedId },
       ],
     },
     {
@@ -111,7 +114,13 @@ export function App() {
     },
     {
       label: 'Clip',
-      items: [{ label: 'Add Title or Credits', onClick: addTitle }],
+      items: [
+        { label: 'Add Title or Credits', onClick: addTitle },
+        'sep',
+        { label: 'Set Start at Playhead (I)', onClick: () => trimAtPlayhead('start'), disabled: !selectedId },
+        { label: 'Set End at Playhead (O)', onClick: () => trimAtPlayhead('end'), disabled: !selectedId },
+        { label: 'Split at Playhead (S)', onClick: splitAtPlayhead, disabled: !selectedId },
+      ],
     },
     {
       label: 'Play',

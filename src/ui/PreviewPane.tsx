@@ -27,7 +27,8 @@ export function PreviewPane() {
       const st = getState();
       renderFrame(ctx, st.project, st.time, assets);
     };
-    draw(); // immediately, with whatever video frames are cached
+    // while playing, draw once per tick (after the frame is ready); when paused/scrubbing, show something at once
+    if (!getState().playing) draw();
     // then fetch the exact video frames and draw again
     void prepare(project, time).then(draw, draw);
   }, [project, time, assetRev]);

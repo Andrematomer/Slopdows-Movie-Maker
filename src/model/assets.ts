@@ -1,4 +1,4 @@
-import { CanvasSink, Input, ALL_FORMATS, AudioBufferSink, BlobSource } from 'mediabunny';
+import { CanvasSink, Input, ALL_FORMATS, AudioBufferSink, BlobSource, type WrappedCanvas } from 'mediabunny';
 import type { Assets } from '../render/types';
 import { snap24 } from '../render/oldCamera';
 import { layout } from './layout';
@@ -30,8 +30,24 @@ interface AudioMedia {
 type Media = ImageMedia | VideoMedia | AudioMedia;
 
 const media = new Map<string, Media>();
-/** latest decoded frame per clip (keyed by clip id so two clips of one file never clash) */
-const frames = new Map<string, { ts: number; dur: number; canvas: CanvasImageSource }>();
+/**
+ * One frame reader per video clip (keyed by clip id so two clips cut from one file never clash).
+ * Frames are read in order from a single running decoder. Asking the decoder for each frame by
+ * timestamp (getCanvas) re-decodes from the previous keyframe every time: ~400 ms per frame on a
+ * 1080p clip, i.e. stutter in the preview and a very slow export.
+ */
+interface Player {
+  mediaId: string;
+  iter: AsyncGenerator<WrappedCanvas, void, unknown> | null;
+  /** frame being shown */
+  cur: WrappedCanvas | null;
+  /** one frame of lookahead (already decoded, starts after `want`) */
+  next: WrappedCanvas | null;
+  /** latest requested source time: older queued requests are ignored in favour of this */
+  want: number;
+  queue: Promise<void>;
+}
+const players = new Map<string, Player>();
 
 export class UnsupportedMediaError extends Error {}
 
@@ -158,6 +174,7 @@ export function getMediaAudio(id: string): AudioBuffer | null {
 export function dropMedia(id: string): void {
   const m = media.get(id);
   if (!m) return;
+  for (const [clipId, pl] of players) if (pl.mediaId === id) (closePlayer(pl), players.delete(clipId));
   if (m.kind === 'image') URL.revokeObjectURL(m.url);
   else {
     if (m.kind === 'video' && m.thumbUrl) URL.revokeObjectURL(m.thumbUrl);
@@ -168,7 +185,7 @@ export function dropMedia(id: string): void {
 
 export function dropAllMedia(): void {
   [...media.keys()].forEach(dropMedia);
-  frames.clear();
+  players.clear();
 }
 
 /** All media ids a project still refers to. */
@@ -187,25 +204,70 @@ export function sourceTime(trimStart: number, local: number, duration: number, o
   return trimStart + (oldCamera ? snap24(l) : l);
 }
 
+function closePlayer(p: Player): void {
+  void p.iter?.return(undefined).catch(() => {});
+  p.iter = null;
+  p.next = null;
+}
+
+const covers = (f: WrappedCanvas, t: number) => t >= f.timestamp - 1e-4 && t < f.timestamp + Math.max(f.duration, 1 / 120);
+
+/** Moves the player forward (or seeks) until `p.cur` is the frame to show at `p.want`. */
+async function advance(m: VideoMedia, p: Player): Promise<void> {
+  const t = p.want;
+  if (p.cur && covers(p.cur, t)) return;
+  const ahead = p.next ?? p.cur;
+  const wentBack = !!p.cur && t < p.cur.timestamp - 1e-4;
+  const bigJump = !!ahead && t > ahead.timestamp + 1; // faster to seek than to decode through a second+ of frames
+  if (!p.iter || wentBack || bigJump) {
+    closePlayer(p);
+    p.cur = null;
+    p.iter = m.sink.canvases(t);
+  }
+  for (;;) {
+    let g = p.next;
+    p.next = null;
+    if (!g) {
+      const r = await p.iter!.next();
+      if (r.done) return; // end of file: keep showing the last frame
+      g = r.value;
+    }
+    if (g.timestamp <= t + 1e-4) {
+      p.cur = g; // at or before the target: a candidate, keep reading
+      continue;
+    }
+    // first frame after the target: keep it for next time
+    if (!p.cur) p.cur = g;
+    else p.next = g;
+    return;
+  }
+}
+
 /**
- * Fetch the video frames the renderer will need at `time`. Decoding is async but
- * renderFrame is sync, so callers `await prepare()` and then render.
+ * Gets the video frames the renderer will need at `time` ready. Decoding is async but renderFrame
+ * is sync, so callers `await prepare()` and then render. Safe to call many times per second: only
+ * the most recent request matters.
  */
 export async function prepare(project: Project, time: number): Promise<void> {
   const { segments, total } = layout(project);
   const t = Math.max(0, Math.min(time, total - 1e-6));
   const active = segments.filter((s) => s.clip.kind === 'video' && t >= s.start && t < s.end + 1e-6);
   await Promise.all(
-    active.map(async (seg) => {
+    active.map((seg) => {
       const clip = seg.clip;
-      if (clip.kind !== 'video') return;
+      if (clip.kind !== 'video') return undefined;
       const m = media.get(clip.mediaId);
-      if (m?.kind !== 'video') return;
+      if (m?.kind !== 'video') return undefined;
       const st = Math.min(sourceTime(clip.trimStart, t - seg.start, clip.duration, !!clip.oldCamera), Math.max(0, m.duration - 0.001));
-      const cached = frames.get(clip.id);
-      if (cached && st >= cached.ts && st < cached.ts + cached.dur) return;
-      const f = await m.sink.getCanvas(st);
-      if (f) frames.set(clip.id, { ts: f.timestamp, dur: Math.max(f.duration, 1 / 120), canvas: f.canvas });
+      let p = players.get(clip.id);
+      if (!p) {
+        p = { mediaId: clip.mediaId, iter: null, cur: null, next: null, want: st, queue: Promise.resolve() };
+        players.set(clip.id, p);
+      }
+      const player = p;
+      player.want = st;
+      player.queue = player.queue.then(() => advance(m, player)).catch(() => closePlayer(player));
+      return player.queue;
     }),
   );
 }
@@ -215,5 +277,5 @@ export const assets: Assets = {
     const m = media.get(mediaId);
     return m?.kind === 'image' ? m.img : undefined;
   },
-  getVideoFrame: (clipId) => frames.get(clipId)?.canvas,
+  getVideoFrame: (clipId) => players.get(clipId)?.cur?.canvas,
 };

@@ -13,6 +13,7 @@ No install. No account. No upload: your files never leave your computer.
 ## What you can do
 
 - Import **pictures, videos and music**, drag clips around on the storyboard, trim and split them.
+- Switch to the **Timeline** to see real time: drag clip edges to trim, drag music to move it, and see music waveforms. Keys: **I** sets the start and **O** sets the end of the selected clip at the playhead, **S** splits.
 - Add **title cards** (white text on deep blue, with fades) and credits.
 - Glue clips together with **transitions**: Star Wipe, Iris, Checkerboard, Pixelate, Spin In and Fade.
 - Pick how each picture or video meets the 4:3 screen: **Fit** (black bars), **Fill** (crop) or **Stretch**.

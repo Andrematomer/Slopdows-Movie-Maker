@@ -3,6 +3,7 @@ import { getThumbUrl } from '../model/assets';
 import { addMedia, moveClip, selectClip, setTransition, useStore } from '../model/store';
 import { TRANSITIONS } from '../model/types';
 import { Icon, TransitionIcon } from './icons';
+import { Timeline } from './Timeline';
 import { randomTransition } from '../render/transitions';
 
 export function Storyboard() {
@@ -12,6 +13,8 @@ export function Storyboard() {
   useStore((s) => s.assetRev); // thumbnails appear after decoding
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [overFile, setOverFile] = useState(false);
+  const [view, setView] = useState<'story' | 'timeline'>('story');
+  const [pps, setPps] = useState(40);
 
   return (
     <div
@@ -28,6 +31,14 @@ export function Storyboard() {
         if (files.length) void addMedia(files);
       }}
     >
+      <div class="view-switch">
+        <button class={view === 'story' ? 'on' : ''} onClick={() => setView('story')}>Storyboard</button>
+        <button class={view === 'timeline' ? 'on' : ''} onClick={() => setView('timeline')}>Timeline</button>
+      </div>
+      {view === 'timeline' ? (
+        <Timeline pps={pps} onZoom={setPps} />
+      ) : (
+      <>
       {clips.length === 0 && <p class="hint">Drag pictures, videos or music here, or use File → Import…</p>}
       <div class="clips-row">
       {clips.map((clip, i) => {
@@ -82,6 +93,7 @@ export function Storyboard() {
                 {clip.kind === 'video' && <span class="badge"><Icon name="film" size={12} /></span>}
               </div>
               <div class="tile-label">{label}</div>
+              <div class="tile-dur">{clip.duration.toFixed(1)} s</div>
             </div>
           </div>
         );
@@ -101,6 +113,8 @@ export function Storyboard() {
             </button>
           ))}
         </div>
+      )}
+      </>
       )}
     </div>
   );

@@ -9,6 +9,7 @@ import {
   setMode2008,
   setResolution,
   splitAtPlayhead,
+  trimAtPlayhead,
   undo,
   updateAudioClip,
   updateClip,
@@ -138,8 +139,10 @@ export function TaskPane({ onImport, onAddTitle, onExport }: Props) {
         <Link onClick={redo}>Redo (Ctrl+Y)</Link>
         <Link onClick={selectAll}>Select all clips (Ctrl+A)</Link>
         <Link onClick={splitAtPlayhead} disabled={total !== 1 || oneClip?.kind === 'title'}>
-          <Icon name="scissors" /> Split at playhead
+          <Icon name="scissors" /> Split at playhead (S)
         </Link>
+        <Link onClick={() => trimAtPlayhead('start')} disabled={total !== 1}>Set start at playhead (I)</Link>
+        <Link onClick={() => trimAtPlayhead('end')} disabled={total !== 1}>Set end at playhead (O)</Link>
       </details>
 
       <details open>

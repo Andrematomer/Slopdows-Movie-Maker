@@ -44,7 +44,7 @@ body { background: #3a6ea5; font-size: 12px; }
 .timecode { font-family: "Courier New", monospace; }
 
 /* storyboard */
-.storyboard { min-height: 130px; max-height: 190px; flex-direction: column; align-items: stretch !important; background: #fff; border-top: 2px groove #fff; overflow-x: auto; display: flex; padding: 8px; gap: 0; box-sizing: border-box; }
+.storyboard { min-height: 130px; max-height: 230px; flex-direction: column; align-items: stretch !important; background: #fff; border-top: 2px groove #fff; overflow-x: auto; display: flex; padding: 8px; gap: 0; box-sizing: border-box; }
 .storyboard.drop-hot { outline: 2px dashed #316ac5; outline-offset: -4px; }
 .storyboard .hint { color: #888; margin: 30px auto; }
 .slot { display: flex; align-items: center; }
@@ -84,3 +84,29 @@ body { background: #3a6ea5; font-size: 12px; }
 .tr-icon { border: 1px solid #1c1c1c; margin-bottom: 2px; }
 .hint-small { margin: 0 0 6px 18px; font-size: 10px; color: #3a4a8a; }
 .taskpane a.disabled { color: #8a93b5; cursor: default; text-decoration: none; }
+
+.tile-dur { text-align: center; font-size: 10px; opacity: .75; }
+.view-switch { display: flex; gap: 2px; margin-bottom: 4px; flex: none; }
+.view-switch button { min-width: 0; min-height: 0; padding: 1px 10px; font-size: 11px; }
+.view-switch button.on { box-shadow: inset 1px 1px 2px #0006; background: #f4f1e4; }
+
+.timeline { display: flex; flex: none; height: 150px; gap: 4px; }
+.tl-zoom { display: flex; flex-direction: column; gap: 2px; }
+.tl-zoom button { min-width: 22px; min-height: 22px; padding: 0; }
+.tl-scroll { flex: 1; overflow-x: auto; overflow-y: hidden; position: relative; border: 1px solid #aca899; background: #f7f5ea; }
+.tl-content { position: relative; height: 100%; user-select: none; touch-action: none; }
+.tl-ruler { position: relative; height: 16px; border-bottom: 1px solid #aca899; background: #ece9d8; cursor: pointer; }
+.tl-ruler .tick { position: absolute; top: 0; height: 100%; border-left: 1px solid #888; padding-left: 2px; font-size: 9px; line-height: 16px; pointer-events: none; }
+.tl-lane { position: relative; margin-top: 3px; border-bottom: 1px dotted #ccc; }
+.tl-clip { position: absolute; top: 0; bottom: 0; box-sizing: border-box; border: 1px solid #1c3a8a; background: #6f9be8 center / auto 100% repeat-x; overflow: hidden; cursor: pointer; }
+.tl-clip.title { background: #000080; color: #fff; }
+.tl-clip.audio { background: #f2c230; border-color: #8a6d00; cursor: grab; }
+.tl-clip.selected { outline: 2px solid #fff; box-shadow: 0 0 0 3px #316ac5; z-index: 2; }
+.tl-label { position: absolute; left: 6px; top: 1px; right: 6px; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 0 2px #fff, 0 0 2px #fff; pointer-events: none; }
+.tl-clip.title .tl-label { text-shadow: none; }
+.tl-clip .wave { position: absolute; left: 0; bottom: 0; height: calc(100% - 14px); }
+.tl-overlap { position: absolute; left: 0; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, rgba(255,255,255,.55) 0 3px, rgba(255,255,255,.1) 3px 6px); pointer-events: none; }
+.handle { position: absolute; top: 0; bottom: 0; width: 7px; cursor: ew-resize; background: rgba(0,0,0,.25); z-index: 3; }
+.handle.left { left: 0; } .handle.right { right: 0; }
+.handle:hover { background: rgba(255,255,255,.7); }
+.tl-playhead { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px solid #d00; pointer-events: none; z-index: 5; }

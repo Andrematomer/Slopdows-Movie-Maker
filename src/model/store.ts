@@ -186,6 +186,35 @@ export function selectRelative(dir: -1 | 1, extend = false): void {
   selectClip(next, extend ? 'range' : 'only');
 }
 
+/**
+ * "Set start here" / "Set end here": trims the selected clip at the playhead.
+ * Start removes everything before the playhead (the clip then begins at the playhead's spot);
+ * end removes everything after it.
+ */
+export function trimAtPlayhead(edge: 'start' | 'end'): void {
+  const MIN = 0.2;
+  if (state.selectedIds.length !== 1) return setState({ notice: 'Select one clip to trim it.' });
+  const id = state.selectedIds[0]!;
+  const t = state.time;
+  const audio = state.project.audioClips.find((a) => a.id === id);
+  if (audio) {
+    const local = t - audio.start;
+    if (local < MIN || local > audio.duration - MIN) return setState({ notice: 'Move the playhead inside the selected clip first.' });
+    if (edge === 'end') return updateAudioClip(id, { duration: local });
+    return updateAudioClip(id, { start: t, trimStart: audio.trimStart + local, duration: audio.duration - local });
+  }
+  const seg = layout(state.project).segments.find((x) => x.clip.id === id);
+  if (!seg) return;
+  const local = t - seg.start;
+  if (local < MIN || local > seg.clip.duration - MIN) return setState({ notice: 'Move the playhead inside the selected clip first.' });
+  const c = seg.clip;
+  if (edge === 'end') updateClip(id, { duration: local });
+  else updateClip(id, { duration: c.duration - local, ...(c.kind === 'video' ? { trimStart: c.trimStart + local } : {}) } as Partial<Clip>);
+  // playhead follows the clip's new beginning so you see the cut
+  const t2 = viewTimeFor(id);
+  setState({ playing: false, ...(edge === 'start' && t2 !== null ? { time: t2 } : {}) });
+}
+
 export function togglePlay(): void {
   const total = totalDuration();
   if (state.playing) return setState({ playing: false });
